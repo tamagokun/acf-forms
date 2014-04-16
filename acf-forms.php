@@ -8,6 +8,8 @@ Author: Mike Kruk
 Author URI: http://ripeworks.com/
 */
 
+if ( ! defined( 'WPINC' ) ) die;
+
 class ACFForms
 {
     public function __construct()
@@ -36,4 +38,4 @@ class ACFForms
     }
 }
 
-$plugin = new ACFForms();
+$instance = new ACFForms();

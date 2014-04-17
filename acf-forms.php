@@ -29,23 +29,10 @@ class ACFForms
 
     public function init()
     {
-        $labels = array(
-            'name' => __('Forms'),
-            'singular_name' => __('Form'),
-            'add_new' => __('Add New'),
-            'add_new_item' => __('Add New Form'),
-            'edit_item' =>  __('Edit Form'),
-            'new_item' => __('New Form'),
-            'view_item' => __('View Form'),
-            'search_items' => __('Search Forms'),
-            'not_found' =>  __('No Forms found'),
-            'not_found_in_trash' => __('No Forms found in Trash')
-        );
-
         // register custom post type to store forms
         register_post_type($this->post_type, array(
             'label' => 'Forms',
-            'labels' => $labels,
+            'labels' => $this->generate_labels("Form", "Forms"),
             'description' => '',
             'public' => false,
             'exclude_from_search' => true,
@@ -64,7 +51,7 @@ class ACFForms
     public function head()
     {
         remove_meta_box('submitdiv', $this->post_type, 'side');
-        add_meta_box('submitdiv', 'Actions', array($this, 'publish_meta_box'), $this->post_type, 'side');
+        add_meta_box('submitdiv', __('Actions'), array($this, 'publish_meta_box'), $this->post_type, 'side');
     }
 
     public function enqueue_scripts()
@@ -77,12 +64,15 @@ class ACFForms
         if (get_post_type() !== $this->post_type) return $actions;
 
         global $post;
-        $actions['submissions'] = '<a href="edit.php?post_type=form-' . $post->post_name . '">View Submissions</a>';
-        unset( $actions['inline hide-if-no-js'] );
-        return $actions;
+        unset($actions['inline hide-if-no-js']); // Remove "Quick Edit"
+        $pre = array_splice($actions, 0, 1);
+
+        return array_merge($pre, array(
+            'submissions' => '<a href="edit.php?post_type=' . $this->entry_post_type($post) . '">View Submissions</a>'
+        ), $actions);
     }
 
-    public function publish_meta_box($post, $box)
+    public function publish_meta_box($post)
     {
         global $action;
 
@@ -112,11 +102,9 @@ class ACFForms
         $forms = $this->all_forms();
         foreach ($forms as $form) {
             $label_prefix = $form->post_title . ':';
-            register_post_type('form-' . $form->post_name, array(
+            register_post_type($this->entry_post_type($form), array(
                 'label' => "$label_prefix Entries",
-                'labels' => array(
-                    'singular_name' => "$label_prefix Entry"
-                ),
+                'labels' => $this->generate_labels("$label_prefix Entry", "Entries"),
                 'description' => '',
                 'public' => false,
                 'exclude_from_search' => true,
@@ -139,7 +127,7 @@ class ACFForms
             // find by id
         }
 
-        $post_type = 'form-' . $atts['form'];
+        $post_type = $this->entry_post_type($atts['form']);
 
         $field_groups = array();
         $field_groups = apply_filters( 'acf/location/match_field_groups', $field_groups, array('post_type' => $post_type) );
@@ -164,6 +152,31 @@ class ACFForms
         ));
 
         return $query->get_posts();
+    }
+
+// private
+    protected function entry_post_type($form_or_slug)
+    {
+        $slug = is_object($form_or_slug) ? $form_or_slug->post_name : $form_or_slug;
+        // TODO: Shorten post_type if too long
+
+        return 'form-' . $slug;
+    }
+
+    protected function generate_labels($singular, $plural)
+    {
+        return array(
+            'name'               => __($plural),
+            'singular_name'      => __($singular),
+            'add_new'            => __('Add New'),
+            'add_new_item'       => __('Add New ' . $singular),
+            'edit_item'          => __('Edit ' . $singular),
+            'new_item'           => __('New ' . $singular),
+            'view_item'          => __('View ' . $singular),
+            'search_items'       => __('Search ' . $plural),
+            'not_found'          => __('No ' . $plural . ' found'),
+            'not_found_in_trash' => __('No ' . $plural . ' found in Trash')
+        );
     }
 }
 

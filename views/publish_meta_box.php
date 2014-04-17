@@ -12,8 +12,12 @@
         </div>
         <div id="publishing-action">
             <span class="spinner"></span>
-            <input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr_e('Update') ?>" />
-            <input name="save" type="submit" class="button-primary button-large" id="publish" accesskey="p" value="<?php esc_attr_e('Update') ?>" />
+            <?php if (!in_array($post->post_status, array('publish')) || 0 == $post->ID): ?>
+                <input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr_e('Publish'); ?>" />
+            <?php else: ?>
+                <input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr_e('Update') ?>" />
+            <?php endif; ?>
+            <?php submit_button(__( 'Save' ), 'primary button-large', 'publish', false, array( 'accesskey' => 'p' )); ?>
         </div>
         <div class="clear"></div>
     </div>

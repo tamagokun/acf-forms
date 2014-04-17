@@ -12,15 +12,19 @@ if ( ! defined( 'WPINC' ) ) die;
 
 class ACFForms
 {
+    public $post_type = 'acf-form';
+    public $shortcode = 'acf-form';
+
     public function __construct()
     {
         add_action('init', array($this, 'init'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_head', array($this, 'head'));
 
-        add_filter('acf/pre_save_post' , array($this, 'save_form_entry'));
+        add_filter('acf/pre_save_post', array($this, 'save_form_entry'));
+        add_filter('post_row_actions', array($this, 'form_row_actions'), 10, 1);
 
-        add_shortcode('acf-form', array($this, 'shortcode_form'));
+        add_shortcode($this->shortcode, array($this, 'shortcode_form'));
     }
 
     public function init()
@@ -39,7 +43,7 @@ class ACFForms
         );
 
         // register custom post type to store forms
-        register_post_type('acf-form', array(
+        register_post_type($this->post_type, array(
             'label' => 'Forms',
             'labels' => $labels,
             'description' => '',
@@ -59,13 +63,23 @@ class ACFForms
 
     public function head()
     {
-        remove_meta_box('submitdiv', 'acf-form', 'side');
-        add_meta_box('submitdiv', 'Actions', array($this, 'publish_meta_box'), 'acf-form', 'side');
+        remove_meta_box('submitdiv', $this->post_type, 'side');
+        add_meta_box('submitdiv', 'Actions', array($this, 'publish_meta_box'), $this->post_type, 'side');
     }
 
     public function enqueue_scripts()
     {
         wp_enqueue_style('acf-forms-css', plugin_dir_url( __FILE__ ) . '/acf-forms.css', false);
+    }
+
+    public function form_row_actions($actions)
+    {
+        if (get_post_type() !== $this->post_type) return $actions;
+
+        global $post;
+        $actions['submissions'] = '<a href="edit.php?post_type=form-' . $post->post_name . '">View Submissions</a>';
+        unset( $actions['inline hide-if-no-js'] );
+        return $actions;
     }
 
     public function publish_meta_box($post, $box)

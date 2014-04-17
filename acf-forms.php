@@ -30,16 +30,16 @@ class ACFForms
     public function init()
     {
         $labels = array(
-		    'name' => __('Forms'),
-			'singular_name' => __('Form'),
-		    'add_new' => __('Add New'),
-		    'add_new_item' => __('Add New Form'),
-		    'edit_item' =>  __('Edit Form'),
-		    'new_item' => __('New Form'),
-		    'view_item' => __('View Form'),
-		    'search_items' => __('Search Forms'),
-		    'not_found' =>  __('No Forms found'),
-		    'not_found_in_trash' => __('No Forms found in Trash')
+            'name' => __('Forms'),
+            'singular_name' => __('Form'),
+            'add_new' => __('Add New'),
+            'add_new_item' => __('Add New Form'),
+            'edit_item' =>  __('Edit Form'),
+            'new_item' => __('New Form'),
+            'view_item' => __('View Form'),
+            'search_items' => __('Search Forms'),
+            'not_found' =>  __('No Forms found'),
+            'not_found_in_trash' => __('No Forms found in Trash')
         );
 
         // register custom post type to store forms

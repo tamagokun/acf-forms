@@ -86,13 +86,24 @@ class ACFForms
     public function save_form_entry($post_id)
     {
         if (strpos($post_id, 'new-form-') === false) return $post_id;
+        $post_type = str_replace('new-', '', $post_id);
 
 		$post = array(
 			'post_status' => 'publish',
-			'post_title' => '',
-			'post_type' => str_replace('new-', '', $post_id)
+			'post_title' => reset($_POST['fields']),
+			'post_type' => $post_type
 		);
 		$post_id = wp_insert_post( $post );
+
+        if ($post_id > 0) {
+
+            $form = get_page_by_path(str_replace('form-', '', $post_type), OBJECT, $this->post_type);
+            if (!$form) return $post_id;
+
+            // handle notifications
+            $this->handle_notification($form);
+
+        }
 
 		return $post_id;
     }
@@ -119,29 +130,77 @@ class ACFForms
 
     public function shortcode_form($atts)
     {
+        $form = false;
+
         if (isset($atts['form'])) {
-            // find by slug
+            $form = get_page_by_path($atts['form'], OBJECT, $this->post_type);
         }
 
         if (isset($atts['id'])) {
-            // find by id
+            $form = get_post($atts['id']);
         }
 
-        $post_type = $this->entry_post_type($atts['form']);
+        if (!$form) return;
+
+        $post_type = $this->entry_post_type($form);
 
         $field_groups = array();
-        $field_groups = apply_filters( 'acf/location/match_field_groups', $field_groups, array('post_type' => $post_type) );
+        $field_groups = apply_filters( 'acf/location/match_field_groups', $field_groups, array('post_type' => $post_type));
 
-        ob_start();
-
-        acf_form(array(
+        $options = array(
             'post_id' => 'new-' . $post_type,
             'post_title' => false,
             'post_content' => false,
-            'field_groups' => $field_groups
-        ));
+            'field_groups' => $field_groups,
+            'submit_value' => $this->value_or_default(get_field('submit_value', $form->ID), __('Submit')),
+            // ACF 5
+            /* 'label_placement' => $this->value_or_default(get_field('label_placement', $form->ID), 'top'), */
+            /* 'instruction_placement' => $this->value_or_default(get_field('instruction_placement', $form->ID), 'label'), */
+            /* 'field_el' => $this->value_or_default(get_field('field_el', $form->ID), 'div') */
+        );
+
+        if ($header = get_field('form_header', $form->ID)) {
+            $options['html_before_fields'] = $header;
+        }
+
+        if ($footer = get_field('form_footer', $form->ID)) {
+            $options['html_after_fields'] = $footer;
+        }
+
+        $success_action = get_field('success_action', $form->ID);
+        if ($success_action == 'message') {
+            $msg = get_field('success_message', $form->ID);
+            if ($msg) $options['updated_message'] = $msg;
+        } elseif ($success_action = 'redirect') {
+            $return = get_field('redirect', $form->ID);
+            if ($return) $options['return'] = $return;
+        }
+
+        ob_start();
+        acf_form($options);
 
         return ob_get_clean();
+    }
+
+    public function handle_notification($form)
+    {
+        $recipient = get_field('notification_recipient', $form->ID);
+        if (!$recipient) return;
+
+        $headers = array();
+
+        $from = get_field('from_address', $form->ID);
+        if ($from) $headers[] = "From: $from";
+
+        $content_type = function() { return 'text/html'; };
+        add_filter('wp_mail_content_type', $content_type);
+        wp_mail(
+            array($recipient),
+            get_field('notification_subject', $form->ID),
+            get_field('notification_body', $form->ID),
+            implode('\r\n', $headers)
+        );
+        remove_filter('wp_mail_content_type', $content_type);
     }
 
     public function all_forms()
@@ -177,6 +236,11 @@ class ACFForms
             'not_found'          => __('No ' . $plural . ' found'),
             'not_found_in_trash' => __('No ' . $plural . ' found in Trash')
         );
+    }
+
+    protected function value_or_default($value, $default)
+    {
+        return $value ? $value : $default;
     }
 }
 

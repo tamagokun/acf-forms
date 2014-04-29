@@ -1,7 +1,7 @@
 <div class="submitbox" id="submitpost">
     <div id="misc-publishing-actions">
         <div class="misc-pub-section">
-            <a class="button" href="edit.php?post_type=form-<?php echo $post->post_name; ?>">View Submissions</a>
+            <a class="button" href="<?php echo $entries_url; ?>">View Submissions</a>
         </div>
     </div>
     <div id="major-publishing-actions">

@@ -10,9 +10,17 @@ Author URI: http://ripeworks.com/
 
 if ( ! defined( 'WPINC' ) ) die;
 
+if (!class_exists('WP_List_Table')) {
+    require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+}
+
+require_once __DIR__ . '/lib/ACFFormsEntryTable.php';
+require_once __DIR__ . '/lib/ACFFormsFormMetaBox.php';
+
 class ACFForms
 {
     public $post_type = 'acf-form';
+    public $entry_post_type = 'acf-form-entry';
     public $shortcode = 'acf-form';
 
     public function __construct()
@@ -20,6 +28,7 @@ class ACFForms
         add_action('init', array($this, 'init'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_head', array($this, 'head'));
+        add_action('admin_menu', array($this, 'menus'));
 
         add_filter('acf/pre_save_post', array($this, 'save_form_entry'));
         add_filter('post_row_actions', array($this, 'form_row_actions'), 10, 1);
@@ -45,13 +54,41 @@ class ACFForms
             'menu_icon' => 'dashicons-clipboard'
         ));
 
-        $this->register_entry_types();
+        register_post_type($this->entry_post_type, array(
+            'label' => 'Entries',
+            'labels' => $this->generate_labels("Entry", "Entries"),
+            'description' => '',
+            'public' => false,
+            'exclude_from_search' => true,
+            'publicly_queryable' => false,
+            'show_ui' => false,
+            'show_in_admin_bar' => false,
+            'supports' => array('title'),
+            'has_archive' => false
+        ));
+
+        $metabox = new ACFFormsFormMetaBox();
     }
 
     public function head()
     {
         remove_meta_box('submitdiv', $this->post_type, 'side');
         add_meta_box('submitdiv', __('Actions'), array($this, 'publish_meta_box'), $this->post_type, 'side');
+    }
+
+    public function menus()
+    {
+        add_submenu_page(
+            null,
+            "Entries",
+            "Entries",
+            "edit_plugins",
+            "acf-forms-view-entries",
+            function() {
+                $form = get_post($_GET['form_id']);
+                include_once(__DIR__ . '/views/entries_list.php');
+            }
+        );
     }
 
     public function enqueue_scripts()
@@ -68,7 +105,7 @@ class ACFForms
         $pre = array_splice($actions, 0, 1);
 
         return array_merge($pre, array(
-            'submissions' => '<a href="edit.php?post_type=' . $this->entry_post_type($post) . '">View Submissions</a>'
+            'submissions' => '<a href="' . $this->entries_url($post) . '">View Submissions</a>'
         ), $actions);
     }
 
@@ -79,25 +116,28 @@ class ACFForms
         $post_type = $post->post_type;
         $post_type_object = get_post_type_object($post_type);
         $can_publish = current_user_can($post_type_object->cap->publish_posts);
+        $entries_url = $this->entries_url($post);
 
         return include __DIR__.'/views/publish_meta_box.php';
     }
 
     public function save_form_entry($post_id)
     {
-        if (strpos($post_id, 'new-form-') === false) return $post_id;
-        $post_type = str_replace('new-', '', $post_id);
+        if (strpos($post_id, $this->entry_post_type . '_for_form_') === false) return $post_id;
+
+        list($post_type, $post_parent) = explode('_for_form_', $post_id, 2);
 
 		$post = array(
 			'post_status' => 'publish',
 			'post_title' => reset($_POST['fields']),
-			'post_type' => $post_type
+            'post_type' => $this->entry_post_type,
+            'post_parent' => $post_parent
 		);
 		$post_id = wp_insert_post( $post );
 
         if ($post_id > 0) {
 
-            $form = get_page_by_path(str_replace('form-', '', $post_type), OBJECT, $this->post_type);
+            $form = get_post($post_parent);
             if (!$form) return $post_id;
 
             // handle notifications
@@ -106,26 +146,6 @@ class ACFForms
         }
 
 		return $post_id;
-    }
-
-    public function register_entry_types()
-    {
-        $forms = $this->all_forms();
-        foreach ($forms as $form) {
-            $label_prefix = $form->post_title . ':';
-            register_post_type($this->entry_post_type($form), array(
-                'label' => "$label_prefix Entries",
-                'labels' => $this->generate_labels("$label_prefix Entry", "Entries"),
-                'description' => '',
-                'public' => false,
-                'exclude_from_search' => true,
-                'publicly_queryable' => false,
-                'show_ui' => false,
-                'show_in_admin_bar' => false,
-                'supports' => array('title'),
-                'has_archive' => false
-            ));
-        }
     }
 
     public function shortcode_form($atts)
@@ -142,16 +162,11 @@ class ACFForms
 
         if (!$form) return;
 
-        $post_type = $this->entry_post_type($form);
-
-        $field_groups = array();
-        $field_groups = apply_filters( 'acf/location/match_field_groups', $field_groups, array('post_type' => $post_type));
-
         $options = array(
-            'post_id' => 'new-' . $post_type,
+            'post_id' => $this->entry_post_type . '_for_form_' . $form->ID,
             'post_title' => false,
             'post_content' => false,
-            'field_groups' => $field_groups,
+            'field_groups' => array(get_post_meta($form->ID, 'form_field_group', true)),
             'submit_value' => $this->value_or_default(get_field('submit_value', $form->ID), __('Submit')),
             // ACF 5
             /* 'label_placement' => $this->value_or_default(get_field('label_placement', $form->ID), 'top'), */
@@ -203,23 +218,10 @@ class ACFForms
         remove_filter('wp_mail_content_type', $content_type);
     }
 
-    public function all_forms()
-    {
-        $query = new WP_Query(array(
-            'post_type' => 'acf-form',
-            'posts_per_page' => -1
-        ));
-
-        return $query->get_posts();
-    }
-
 // private
-    protected function entry_post_type($form_or_slug)
+    protected function entries_url($form)
     {
-        $slug = is_object($form_or_slug) ? $form_or_slug->post_name : $form_or_slug;
-        // TODO: Shorten post_type if too long
-
-        return 'form-' . $slug;
+        return "edit.php?page=acf-forms-view-entries&post_type=" . $this->post_type . "&form_id=" . $form->ID;
     }
 
     protected function generate_labels($singular, $plural)

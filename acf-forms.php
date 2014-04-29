@@ -31,8 +31,10 @@ class ACFForms
         add_action('admin_head', array($this, 'admin_init'));
         add_action('admin_menu', array($this, 'menus'));
 
-        add_filter('acf/pre_save_post', array($this, 'save_form_entry'));
         add_filter('post_row_actions', array($this, 'form_row_actions'), 10, 1);
+
+        add_action('acf/save_post', array($this, 'handle_notification'), 20);
+        add_filter('acf/pre_save_post', array($this, 'save_form_entry'));
 
         add_shortcode($this->shortcode, array($this, 'shortcode_form'));
     }
@@ -125,18 +127,8 @@ class ACFForms
             'post_type' => $this->entry_post_type,
             'post_parent' => $post_parent
 		);
-		$post_id = wp_insert_post( $post );
 
-        if ($post_id > 0) {
-
-            $form = get_post($post_parent);
-            if (!$form) return $post_id;
-
-            // handle notifications
-            $this->handle_notification($form, get_post($post_id));
-        }
-
-		return $post_id;
+		return wp_insert_post( $post );
     }
 
     public function shortcode_form($atts)
@@ -188,8 +180,16 @@ class ACFForms
         return ob_get_clean();
     }
 
-    public function handle_notification($form, $entry)
+    public function handle_notification($post_id)
     {
+        $entry = get_post($post_id);
+        if ($entry->post_type !== $this->entry_post_type) return $post_id;
+
+        $form = get_post($entry->post_parent);
+        if (!$form) return $post_id;
+
+        $fields = get_fields($entry);
+
         $headers = array();
         $content_type = function() { return 'text/html'; };
 
@@ -201,9 +201,9 @@ class ACFForms
             if ($from) $headers[] = "From: $from";
 
             wp_mail(
-                array($recipient),
-                $this->replace_field_shortcodes(get_field('notification_subject', $form->ID), $entry),
-                $this->replace_field_shortcodes(get_field('notification_body', $form->ID), $entry),
+                array($user_recipient),
+                $this->replace_field_tags(get_field('notification_subject', $form->ID), $fields),
+                $this->replace_field_tags(get_field('notification_body', $form->ID), $fields),
                 implode('\r\n', $headers)
             );
         }
@@ -212,8 +212,8 @@ class ACFForms
         if ($admin_recipient) {
             wp_mail(
                 array($admin_recipient),
-                $this->replace_field_shortcodes(get_field('admin_email_subject', $form->ID), $entry),
-                $this->replace_field_shortcodes(get_field('admin_email_body', $form->ID), $entry)
+                $this->replace_field_tags(get_field('admin_email_subject', $form->ID), $fields),
+                $this->replace_field_tags(get_field('admin_email_body', $form->ID), $fields)
             );
         }
 
@@ -226,24 +226,19 @@ class ACFForms
         return "edit.php?page=acf-forms-view-entries&post_type=" . $this->post_type . "&form_id=" . $form->ID;
     }
 
-    protected function replace_field_shortcodes($string, $entry)
+    protected function replace_field_tags($string, $fields)
     {
-        return $string;
-
-        // TODO: We don't have ACF fields at this point
-        $fields = get_fields($entry->ID);
-
         $m = array();
         preg_match_all('/\[\w+\]/', $string, $m, PREG_OFFSET_CAPTURE);
         foreach ($m as $match) {
             if (!isset($match[0])) continue;
 
             $field = str_replace(array("[","]"), "", $match[0][0]);
-            $rep = '[acf field="' . $field . '" post_id="' . $entry->ID . '"]';
-            $string = substr_replace($match[0][0], $rep, $match[0][1]);
+            $replace = $fields[$field];
+            $string = str_replace($match[0][0], $replace, $string);
         }
 
-        return do_shortcode($string);
+        return $string;
     }
 
     protected function generate_labels($singular, $plural)

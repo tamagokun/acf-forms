@@ -5,7 +5,7 @@ class ACFFormsPublishMetaBox
     public function __construct()
     {
         remove_meta_box('submitdiv', 'acf-form', 'side');
-        add_action('add_meta_boxes', array($this, 'add_meta_box'));
+        $this->add_meta_box();
     }
 
     public function add_meta_box()

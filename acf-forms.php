@@ -16,6 +16,7 @@ if (!class_exists('WP_List_Table')) {
 
 require_once __DIR__ . '/lib/ACFFormsEntryTable.php';
 require_once __DIR__ . '/lib/ACFFormsFormMetaBox.php';
+require_once __DIR__ . '/lib/ACFFormsPublishMetaBox.php';
 
 class ACFForms
 {
@@ -27,7 +28,7 @@ class ACFForms
     {
         add_action('init', array($this, 'init'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('admin_head', array($this, 'head'));
+        add_action('admin_head', array($this, 'admin_init'));
         add_action('admin_menu', array($this, 'menus'));
 
         add_filter('acf/pre_save_post', array($this, 'save_form_entry'));
@@ -54,6 +55,7 @@ class ACFForms
             'menu_icon' => 'dashicons-clipboard'
         ));
 
+        // register custom post type to store entries
         register_post_type($this->entry_post_type, array(
             'label' => 'Entries',
             'labels' => $this->generate_labels("Entry", "Entries"),
@@ -67,13 +69,15 @@ class ACFForms
             'has_archive' => false
         ));
 
-        $metabox = new ACFFormsFormMetaBox();
+        // register ACF fields for forms
+        include_once 'acf-form-field-group.php';
     }
 
-    public function head()
+    public function admin_init()
     {
-        remove_meta_box('submitdiv', $this->post_type, 'side');
-        add_meta_box('submitdiv', __('Actions'), array($this, 'publish_meta_box'), $this->post_type, 'side');
+        // set up meta boxes for forms
+        $form_metabox = new ACFFormsFormMetaBox();
+        $publish_metabox = new ACFFormsPublishMetaBox();
     }
 
     public function menus()
@@ -107,18 +111,6 @@ class ACFForms
         return array_merge($pre, array(
             'submissions' => '<a href="' . $this->entries_url($post) . '">View Submissions</a>'
         ), $actions);
-    }
-
-    public function publish_meta_box($post)
-    {
-        global $action;
-
-        $post_type = $post->post_type;
-        $post_type_object = get_post_type_object($post_type);
-        $can_publish = current_user_can($post_type_object->cap->publish_posts);
-        $entries_url = $this->entries_url($post);
-
-        return include __DIR__.'/views/publish_meta_box.php';
     }
 
     public function save_form_entry($post_id)
@@ -198,22 +190,33 @@ class ACFForms
 
     public function handle_notification($form, $entry)
     {
-        $recipient = get_field('notification_recipient', $form->ID);
-        if (!$recipient) return;
-
         $headers = array();
-
-        $from = get_field('from_address', $form->ID);
-        if ($from) $headers[] = "From: $from";
-
         $content_type = function() { return 'text/html'; };
+
         add_filter('wp_mail_content_type', $content_type);
-        wp_mail(
-            array($recipient),
-            $this->replace_field_shortcodes(get_field('notification_subject', $form->ID), $entry),
-            $this->replace_field_shortcodes(get_field('notification_body', $form->ID), $entry),
-            implode('\r\n', $headers)
-        );
+
+        $user_recipient = get_field('notification_recipient', $form->ID);
+        if ($user_recipient) {
+            $from = get_field('from_address', $form->ID);
+            if ($from) $headers[] = "From: $from";
+
+            wp_mail(
+                array($recipient),
+                $this->replace_field_shortcodes(get_field('notification_subject', $form->ID), $entry),
+                $this->replace_field_shortcodes(get_field('notification_body', $form->ID), $entry),
+                implode('\r\n', $headers)
+            );
+        }
+
+        $admin_recipient = get_field('admin_email', $form->ID);
+        if ($admin_recipient) {
+            wp_mail(
+                array($admin_recipient),
+                $this->replace_field_shortcodes(get_field('admin_email_subject', $form->ID), $entry),
+                $this->replace_field_shortcodes(get_field('admin_email_body', $form->ID), $entry)
+            );
+        }
+
         remove_filter('wp_mail_content_type', $content_type);
     }
 
@@ -227,11 +230,20 @@ class ACFForms
     {
         return $string;
 
-        // TODO: How can we get the fields for the entry?
+        // TODO: We don't have ACF fields at this point
         $fields = get_fields($entry->ID);
 
         $m = array();
-        preg_match_all('/\[(\w+)\]/', $string, $m);
+        preg_match_all('/\[\w+\]/', $string, $m, PREG_OFFSET_CAPTURE);
+        foreach ($m as $match) {
+            if (!isset($match[0])) continue;
+
+            $field = str_replace(array("[","]"), "", $match[0][0]);
+            $rep = '[acf field="' . $field . '" post_id="' . $entry->ID . '"]';
+            $string = substr_replace($match[0][0], $rep, $match[0][1]);
+        }
+
+        return do_shortcode($string);
     }
 
     protected function generate_labels($singular, $plural)

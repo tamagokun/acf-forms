@@ -4,6 +4,7 @@
     <tr>
         <th>
             <label for="form_field_group">Form Field Group</label>
+            <p>Select the Advanced Custom Fields Field Group that will be used to populate the form fields.</p>
         </th>
         <td>
             <select name="form_field_group" id="form_field_group">

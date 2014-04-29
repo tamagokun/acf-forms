@@ -141,8 +141,7 @@ class ACFForms
             if (!$form) return $post_id;
 
             // handle notifications
-            $this->handle_notification($form);
-
+            $this->handle_notification($form, get_post($post_id));
         }
 
 		return $post_id;
@@ -197,7 +196,7 @@ class ACFForms
         return ob_get_clean();
     }
 
-    public function handle_notification($form)
+    public function handle_notification($form, $entry)
     {
         $recipient = get_field('notification_recipient', $form->ID);
         if (!$recipient) return;
@@ -211,8 +210,8 @@ class ACFForms
         add_filter('wp_mail_content_type', $content_type);
         wp_mail(
             array($recipient),
-            get_field('notification_subject', $form->ID),
-            get_field('notification_body', $form->ID),
+            $this->replace_field_shortcodes(get_field('notification_subject', $form->ID), $entry),
+            $this->replace_field_shortcodes(get_field('notification_body', $form->ID), $entry),
             implode('\r\n', $headers)
         );
         remove_filter('wp_mail_content_type', $content_type);
@@ -222,6 +221,17 @@ class ACFForms
     protected function entries_url($form)
     {
         return "edit.php?page=acf-forms-view-entries&post_type=" . $this->post_type . "&form_id=" . $form->ID;
+    }
+
+    protected function replace_field_shortcodes($string, $entry)
+    {
+        return $string;
+
+        // TODO: How can we get the fields for the entry?
+        $fields = get_fields($entry->ID);
+
+        $m = array();
+        preg_match_all('/\[(\w+)\]/', $string, $m);
     }
 
     protected function generate_labels($singular, $plural)

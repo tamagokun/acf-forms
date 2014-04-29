@@ -1,3 +1,10 @@
 .post-type-acf-form #wpbody-content .add-new-h2 {
   display: none;
 }
+
+#acf-forms-form-field-group th {
+}
+
+#acf-forms-form-field-group th p {
+  font-weight: normal;
+}

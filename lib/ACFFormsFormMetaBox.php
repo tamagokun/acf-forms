@@ -12,7 +12,7 @@ class ACFFormsFormMetaBox
     {
         add_meta_box(
             'acf-forms-form-field-group',
-            'Form Field Group',
+            'Form Settings',
             array($this, 'show'),
             'acf-form',
             'normal',
@@ -28,7 +28,7 @@ class ACFFormsFormMetaBox
         include(dirname(__DIR__) . '/views/form_meta_box.php');
     }
 
-    public function save($post_id, $post)
+    public function save($post_id)
     {
         if (empty($_POST['meta_box_ids'])) return;
         foreach ($_POST['meta_box_ids'] as $metabox_id) {
@@ -41,6 +41,6 @@ class ACFFormsFormMetaBox
             }
         }
 
-        return $post;
+        return $post_id;
     }
 }

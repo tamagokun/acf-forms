@@ -4,12 +4,8 @@ class ACFFormsFormMetaBox
 {
     public function __construct()
     {
-        add_action('add_meta_boxes', array($this, 'add_meta_box'));
         add_action('save_post', array($this, 'save'));
-    }
 
-    public function add_meta_box()
-    {
         add_meta_box(
             'acf-forms-form-field-group',
             'Form Settings',

@@ -14,5 +14,5 @@ Create user contact forms with the power of Advanced Custom Fields!
 2. Install plugin
 3. Create new ACF field group (these are your form fields)
 4. Create new form
-5. Assign form's field group to the ACF field group you just created
+5. Select the ACF field group you just created from the form's dropdown
 6. Drop in the shortcode somewhere `[acf-form form="my-form-slug"]`

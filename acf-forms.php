@@ -270,12 +270,14 @@ class ACFForms
     {
         $m = array();
         preg_match_all('/\[\w+\]/', $string, $m, PREG_OFFSET_CAPTURE);
-        foreach ($m as $match) {
+        if (!isset($m[0])) return $string;
+
+        foreach ($m[0] as $match) {
             if (!isset($match[0])) continue;
 
-            $field = str_replace(array("[","]"), "", $match[0][0]);
+            $field = str_replace(array("[","]"), "", $match[0]);
             $replace = $fields[$field];
-            $string = str_replace($match[0][0], $replace, $string);
+            $string = str_replace($match[0], $replace, $string);
         }
 
         return $string;

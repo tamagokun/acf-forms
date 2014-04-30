@@ -2,6 +2,11 @@
 
 Create user contact forms with the power of Advanced Custom Fields!
 
+Tested with:
+
+* Wordpress 3.9
+* ACF v4
+
 ## Features
 
 * Submissions are persisted in Wordpress

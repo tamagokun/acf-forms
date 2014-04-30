@@ -195,7 +195,8 @@ class ACFForms
 
         add_filter('wp_mail_content_type', $content_type);
 
-        $user_recipient = get_field('notification_recipient', $form->ID);
+        $email_field = get_field('notification_field_name', $form->ID);
+        $user_recipient = $fields[$email_field];
         if ($user_recipient) {
             $from = get_field('from_address', $form->ID);
             if ($from) $headers[] = "From: $from";

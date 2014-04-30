@@ -20,6 +20,10 @@ class ACFFormsFormMetaBox
     {
         $field_groups = array();
         $field_groups = apply_filters('acf/get_field_groups', $field_groups);
+        // remove acf-form field group
+        foreach ($field_groups as $k=>$field_group) {
+            if ($field_group['id'] == 'acf_form-settings') unset($field_groups[$k]);
+        }
 
         include(dirname(__DIR__) . '/views/form_meta_box.php');
     }

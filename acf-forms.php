@@ -28,7 +28,7 @@ class ACFForms
     {
         add_action('init', array($this, 'init'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('admin_head', array($this, 'admin_init'));
+        add_action('admin_init', array($this, 'admin_init'));
         add_action('admin_menu', array($this, 'menus'));
         add_action('wp', array($this, 'process_submission'));
 

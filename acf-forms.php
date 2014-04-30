@@ -30,6 +30,7 @@ class ACFForms
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_head', array($this, 'admin_init'));
         add_action('admin_menu', array($this, 'menus'));
+        add_action('wp', array($this, 'process_submission'));
 
         add_filter('post_row_actions', array($this, 'form_row_actions'), 10, 1);
 
@@ -219,6 +220,44 @@ class ACFForms
         }
 
         remove_filter('wp_mail_content_type', $content_type);
+    }
+
+    /*
+     * ACF acf_form_head()
+     */
+    public function process_submission()
+    {
+        // global vars
+        global $post_id;
+
+
+        // verify nonce
+        if( isset($_POST['acf_nonce']) && wp_verify_nonce($_POST['acf_nonce'], 'input') )
+        {
+            // $post_id to save against
+            $post_id = $_POST['post_id'];
+
+
+            // allow for custom save
+            $post_id = apply_filters('acf/pre_save_post', $post_id);
+
+
+            // save the data
+            do_action('acf/save_post', $post_id);	
+
+
+            // redirect
+            if(isset($_POST['return']))
+            {
+                wp_redirect($_POST['return']);
+                exit;
+            }
+        }
+
+        // actions
+        do_action('acf/input/admin_enqueue_scripts');
+
+        add_action('wp_head', 'acf_form_wp_head');
     }
 
 // private

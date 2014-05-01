@@ -13,7 +13,30 @@ class ACFFormsEntryTable extends WP_List_Table
             'plural'   => 'acf_form_entires',
             'ajax'     => false
         ));
+
+        error_log(print_r($_SERVER['REQUEST_URI'], true));
     }
+
+    public function extra_tablenav($which)
+    {
+        if ($which !== 'top') return;
+
+        echo '<input type="hidden" name="post_type" value="' . $_GET['post_type'] . '">';
+        echo '<input type="hidden" name="form_id" value="' . $_GET['form_id'] . '">';
+    }
+
+    public function set_pagination_args( $args )
+    {
+        $args['post_type'] = $_GET['post_type'];
+        $args['form_id'] = $_GET['form_id'];
+
+        return parent::set_pagination_args($args);
+    }
+
+    public function no_items()
+    {
+		_e('No submissions found.');
+	}
 
     public function column_default($item, $column_name)
     {
@@ -27,8 +50,9 @@ class ACFFormsEntryTable extends WP_List_Table
 
     public function column_data($item)
     {
+        $url = "?page=%s&action=%s&acf_form_entry=%s&form_id=" . $_GET['form_id'] . "&post_type=" . $_GET['post_type'];
         $actions = array(
-            'delete' => sprintf('<a href="?page=%s&action=%s&acf_form_entry=%s">Delete</a>',$_REQUEST['page'],'delete',$item->ID)
+            'delete' => sprintf('<a href="' . $url . '">Delete</a>',$_REQUEST['page'],'delete',$item->ID)
         );
 
         $fields = get_field_objects($item->ID);
@@ -73,7 +97,11 @@ class ACFFormsEntryTable extends WP_List_Table
     public function process_bulk_action()
     {
         if ('delete' === $this->current_action()) {
-            wp_die('baleeted!');
+            $entries = $_GET['acf_form_entry'];
+            if (!is_array($entries)) $entries = array($entries);
+            foreach ($entries as $id) {
+                wp_delete_post($id);
+            }
         }
     }
 

@@ -3,6 +3,10 @@
         <div class="misc-pub-section">
             <a class="button" href="<?php echo $entries_url; ?>">View Submissions</a>
         </div>
+        <div class="misc-pub-section">
+            <label>Shortcode:</label>
+            <strong>[acf-form form="<?php echo $post->post_name; ?>"]</strong>
+        </div>
     </div>
     <div id="major-publishing-actions">
         <div id="delete-action">

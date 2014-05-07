@@ -30,6 +30,7 @@ class ACFForms
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_init', array($this, 'admin_init'));
         add_action('admin_menu', array($this, 'menus'));
+        add_action('admin_notices', array($this, 'notice_check_acf_installed'));
         add_action('wp', array($this, 'process_submission'));
 
         add_filter('post_row_actions', array($this, 'form_row_actions'), 10, 1);
@@ -258,6 +259,19 @@ class ACFForms
         do_action('acf/input/admin_enqueue_scripts');
 
         add_action('wp_head', 'acf_form_wp_head');
+    }
+
+    public function notice_check_acf_installed()
+    {
+        $screen = get_current_screen();
+        if ($screen->post_type !== $this->post_type) return;
+
+        if (!function_exists('register_field_group')) {
+            $msg = <<<EOT
+<a href="http://wordpress.org/plugins/advanced-custom-fields/" target="_blank">Advanced Custom Fields</a> is required to use this plugin.
+EOT;
+            echo '<div class="error"><p>' . $msg . '</p></div>';
+        }
     }
 
 // private

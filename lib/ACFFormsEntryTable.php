@@ -13,8 +13,6 @@ class ACFFormsEntryTable extends WP_List_Table
             'plural'   => 'acf_form_entires',
             'ajax'     => false
         ));
-
-        error_log(print_r($_SERVER['REQUEST_URI'], true));
     }
 
     public function extra_tablenav($which)

@@ -142,13 +142,45 @@ class ACFFormsEntryTable extends WP_List_Table
     }
 
 //private
-    protected function print_field($field)
+    protected function print_field($field, $is_field = true)
     {
-        $val = $field['value'];
-        if (is_array($val)) {
-            return implode(', ', $val);
+        $val = $is_field ? $field['value'] : $field;
+
+        if ($is_field) {
+            if ($field['type'] == "user") {
+                return '<a href="user-edit.php?user_id=' . $val['ID'] . '">' . $val['display_name'] . '</a>';
+            }
+
+            if ($field['type'] == "relationship" && $field['return_format'] == "id") {
+                foreach($val as $i => $post_id) $val[$i] = get_post($post_id);
+            }
+
+            if ($field['type'] == "taxonomy") {
+                if ($field['return_format'] == "id") {
+                    foreach($val as $i => $term_id) {
+                        $val[$i] = get_term($term_id, $field['taxonomy']);
+                    }
+                }
+
+                $output = array();
+                foreach($val as $term) $output[] = $term->name;
+                return implode(', ', $output);
+            }
         }
 
+        if (is_object($val)) {
+            if (get_class($val) == "WP_Post") {
+                return '<a href="' . $val->guid . '">' . $val->post_title . '</a>';
+            }
+        }
+
+        if (is_array($val)) {
+            $ouput = array();
+            foreach($val as $subval) {
+                $output[] = $this->print_field($subval, false);
+            }
+            return implode(', ', $output);
+        }
 
         return $val;
     }

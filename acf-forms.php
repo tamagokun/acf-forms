@@ -3,7 +3,7 @@
 Plugin Name: ACF Forms
 Plugin URI: https://github.com/tamagokun/acf-forms
 Description: Create forms using Advanced Custom Fields.
-Version: 0.2
+Version: 0.2.1
 Author: Mike Kruk
 Author URI: http://ripeworks.com/
 */

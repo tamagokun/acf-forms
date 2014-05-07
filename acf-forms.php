@@ -192,35 +192,40 @@ class ACFForms
 
         $fields = get_fields($entry);
 
+        do_action('acf-forms/before_notification', $form);
+
         $headers = array();
         $content_type = function() { return 'text/html'; };
 
         add_filter('wp_mail_content_type', $content_type);
 
         $email_field = get_field('notification_field_name', $form->ID);
-        $user_recipient = $fields[$email_field];
-        if ($user_recipient) {
+        $recipients = array($fields[$email_field]);
+
+        if (count($recipients)) {
             $from = get_field('from_address', $form->ID);
             if ($from) $headers[] = "From: $from";
 
             wp_mail(
-                array($user_recipient),
+                $recipients,
                 $this->replace_field_tags(get_field('notification_subject', $form->ID), $fields),
                 $this->replace_field_tags(get_field('notification_body', $form->ID), $fields),
                 implode('\r\n', $headers)
             );
         }
 
-        $admin_recipient = get_field('admin_email', $form->ID);
-        if ($admin_recipient) {
+        $recipients = array(get_field('admin_email', $form->ID));
+        $recipients = apply_filters('acf-forms/notification_recipients', $recipients);
+        if (count($recipients)) {
             wp_mail(
-                array($admin_recipient),
+                $recipients,
                 $this->replace_field_tags(get_field('admin_email_subject', $form->ID), $fields),
                 $this->replace_field_tags(get_field('admin_email_body', $form->ID), $fields)
             );
         }
 
         remove_filter('wp_mail_content_type', $content_type);
+        do_action('acf-forms/after_notification', $form);
     }
 
     /*

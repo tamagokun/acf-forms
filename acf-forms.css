@@ -5,3 +5,11 @@
 #acf-forms-form-field-group th p {
   font-weight: normal;
 }
+
+.full-submission {
+  display: none;
+}
+
+.open .full-submission {
+  display: block;
+}

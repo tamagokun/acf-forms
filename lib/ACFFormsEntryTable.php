@@ -55,6 +55,10 @@ class ACFFormsEntryTable extends WP_List_Table
 
         $fields = get_field_objects($item->ID);
 
+        if (count($fields) > 4) {
+            $actions['more'] = '<a href="" class="toggle-full-submission">More</a>';
+        }
+
         ob_start();
         include(dirname(__DIR__) . '/views/entry_data_row.php');
         return ob_get_clean() . $this->row_actions($actions);
@@ -135,5 +139,17 @@ class ACFFormsEntryTable extends WP_List_Table
         ));
 
         $this->items = $wpdb->get_results($wpdb->prepare($query, $this->form->ID));
+    }
+
+//private
+    protected function print_field($field)
+    {
+        $val = $field['value'];
+        if (is_array($val)) {
+            return implode(', ', $val);
+        }
+
+
+        return $val;
     }
 }

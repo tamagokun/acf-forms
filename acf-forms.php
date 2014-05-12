@@ -192,7 +192,7 @@ class ACFForms
 
         $fields = get_fields($entry);
 
-        do_action('acf-forms/before_notification', $form);
+        do_action('acf-forms/before_notification', $entry, $form);
 
         $headers = array();
         $content_type = function() { return 'text/html'; };
@@ -215,7 +215,7 @@ class ACFForms
         }
 
         $recipients = array(get_field('admin_email', $form->ID));
-        $recipients = apply_filters('acf-forms/notification_recipients', $recipients, $form);
+        $recipients = apply_filters('acf-forms/notification_recipients', $recipients, $entry, $form);
         if (count($recipients)) {
             wp_mail(
                 $recipients,
@@ -225,7 +225,7 @@ class ACFForms
         }
 
         remove_filter('wp_mail_content_type', $content_type);
-        do_action('acf-forms/after_notification', $form);
+        do_action('acf-forms/after_notification', $entry, $form);
     }
 
     /*

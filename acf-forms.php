@@ -215,7 +215,7 @@ class ACFForms
         }
 
         $recipients = array(get_field('admin_email', $form->ID));
-        $recipients = apply_filters('acf-forms/notification_recipients', $recipients);
+        $recipients = apply_filters('acf-forms/notification_recipients', $recipients, $form);
         if (count($recipients)) {
             wp_mail(
                 $recipients,

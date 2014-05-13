@@ -14,6 +14,7 @@ if (!class_exists('WP_List_Table')) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
 
+require_once __DIR__ . '/lib/ACFFormsUtil.php';
 require_once __DIR__ . '/lib/ACFFormsEntryTable.php';
 require_once __DIR__ . '/lib/ACFFormsFormMetaBox.php';
 require_once __DIR__ . '/lib/ACFFormsPublishMetaBox.php';
@@ -190,7 +191,7 @@ class ACFForms
         $form = get_post($entry->post_parent);
         if (!$form) return $post_id;
 
-        $fields = get_fields($entry);
+        $fields = get_field_objects($entry);
 
         do_action('acf-forms/before_notification', $entry, $form);
 
@@ -220,7 +221,7 @@ class ACFForms
             wp_mail(
                 $recipients,
                 $this->replace_field_tags(get_field('admin_email_subject', $form->ID), $fields),
-                $this->replace_field_tags(get_field('admin_email_body', $form->ID), $fields)
+                $this->get_admin_notification_email_body($form, $fields)
             );
         }
 
@@ -280,6 +281,24 @@ EOT;
     }
 
 // private
+    protected function get_admin_notification_email_body($form, $fields)
+    {
+        $body = get_field('admin_email_body', $form->ID);
+        $body = $this->replace_field_tags($body, $fields);
+        $include_fields = get_field('admin_include_fields_in_email', $form->ID);
+        if ($include_fields === true) {
+            $body .= "<ul>";
+            foreach ($fields as $field) {
+                $label = $field["label"];
+                $value = ACFFormsUtil::print_field($field);
+                $body .= "<li><strong>" . $label . ": </strong>" . $value . "</li>";
+            }
+            $body .= "</ul>";
+        }
+
+        return $body;
+    }
+
     protected function entries_url($form)
     {
         return "edit.php?page=acf-forms-view-entries&post_type=" . $this->post_type . "&form_id=" . $form->ID;
@@ -295,7 +314,7 @@ EOT;
             if (!isset($match[0])) continue;
 
             $field = str_replace(array("[","]"), "", $match[0]);
-            $replace = $fields[$field];
+            $replace = ACFFormsUtil::print_field($fields[$field]);
             $string = str_replace($match[0], $replace, $string);
         }
 

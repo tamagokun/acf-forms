@@ -5,7 +5,7 @@
     <?php endif; ?>
     <p>
         <strong><?php echo $field['label']; ?>: </strong>
-        <?php echo $this->print_field($field); ?>
+        <?php echo ACFFormsUtil::print_field($field, true); ?>
     </p>
     <?php $count++; ?>
 <?php endforeach; ?>
